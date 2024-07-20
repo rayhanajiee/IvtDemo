@@ -1,0 +1,6 @@
+{
+    "scripts": {
+      "start": "gunicorn your_project_name.wsgi"
+    }
+  }
+  
