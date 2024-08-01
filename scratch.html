@@ -1,0 +1,271 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+    {% if messages %}
+        <div class="row mt-3">
+            {% for message in messages %}
+                {% if message.tags == 'error' %}
+                    <div class="col-md-10 col-12 mx-auto alert alert-danger">
+                        {{ message }}
+                    </div>
+                {% else %}
+                    <div class="col-md-10 col-12 mx-auto alert alert-success">
+                        {{ message }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-10 col-12 mx-auto mt-5">
+            <div class="d-flex justify-content-between">
+                <input type="text" id="searchBar" class="form-control w-75" placeholder="Search...">
+                <div>
+                    <a href="{% url 'add-item' %}" class="btn btn-custom">+</a> <!-- + Button -->
+                    <a href="{% url 'export-data' %}" class="btn btn-success">Export to Excel</a> <!-- Export Button -->
+                </div>
+            </div>
+    
+            <!-- Rest of the table and content -->
+
+            <table class="table table-hover table-striped mt-3">
+                <thead style="background-color: #ff8200; color: #ffffff;">
+                    <tr>
+                        <th scope="col">No <button class="sort-button" data-sort="no">⇅</button></th>
+                        <th scope="col">Name <button class="sort-button" data-sort="name">⇅</button></th>
+                        <th scope="col">Code <button class="sort-button" data-sort="code">⇅</button></th>
+                        <th scope="col">Photo</th>
+                        <th scope="col">PIC <button class="sort-button" data-sort="pic">⇅</button></th>
+                        <th scope="col">Location <button class="sort-button" data-sort="location">⇅</button></th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                    <tr>
+                        <th>
+                            <select id="filterNo" class="form-control">
+                                <option value="">All</option>
+                            </select>
+                        </th>
+                        <th>
+                            <select id="filterName" class="form-control">
+                                <option value="">All</option>
+                            </select>
+                        </th>
+                        <th>
+                            <select id="filterCode" class="form-control">
+                                <option value="">All</option>
+                            </select>
+                        </th>
+                        <th></th>
+                        <th>
+                            <select id="filterPic" class="form-control">
+                                <option value="">All</option>
+                            </select>
+                        </th>
+                        <th>
+                            <select id="filterLocation" class="form-control">
+                                <option value="">All</option>
+                            </select>
+                        </th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                    {% if items|length == 0 %}
+                    <tr>
+                        <th scope="row">-</th>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    {% else %}
+                        {% for item in items %}
+                        <tr>
+                            <th scope="row">{{ item.no }}</th>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.code }}</td>
+                            {% if item.photo %}
+                                <td><img src="{{ item.photo.url }}" alt="{{ item.name }}" style="width: 50px; height: auto;"></td>
+                            {% else %}
+                                <td>No photo available</td>
+                            {% endif %}
+                            <td>{{ item.pic }}</td>
+                            <td>{{ item.location }}</td>
+                            <td>
+                                <button class="btn btn-custom btn-sm toggle-details">Show Details</button> <!-- Show Details Button -->
+                                <a href="{% url 'edit-item' item.id %}" class="btn btn-outline-secondary">Edit</a>
+                                <a href="{% url 'delete-item' item.id %}" class="btn btn-delete">Delete</a>
+                            </td>
+                        </tr>
+                        <tr class="extra-details d-none">
+                            <td colspan="7">
+                                <div class="row">
+                                    <div class="col">
+                                        <strong>Quantity:</strong> {% if item.quantity < 10 %}<span class="text-danger">{{ item.quantity }}</span>{% else %}<span class="text-success">{{ item.quantity }}</span>{% endif %}
+                                    </div>
+                                    <div class="col"><strong>Department:</strong> {{ item.department }}</div>
+                                    <div class="col"><strong>Category:</strong> {{ item.category.name }}</div>
+                                    <div class="col"><strong>Date Created:</strong> {{ item.date_created }}</div>
+                                    <div class="col"><strong>History:</strong> {{ item.history }}</div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const items = JSON.parse(document.getElementById('inventory-data').textContent);
+        
+            function populateDropdown(dropdownId, data, key) {
+                const dropdown = document.getElementById(dropdownId);
+                const uniqueValues = [...new Set(data.map(item => item.fields[key]))];
+                uniqueValues.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    dropdown.appendChild(option);
+                });
+            }
+        
+            // Populate dropdowns
+            populateDropdown('filterNo', items, 'no');
+            populateDropdown('filterName', items, 'name');
+            populateDropdown('filterCode', items, 'code');
+            populateDropdown('filterPic', items, 'pic');
+            populateDropdown('filterLocation', items, 'location');
+        
+            // Toggle Details
+            document.querySelectorAll('.toggle-details').forEach(button => {
+                button.addEventListener('click', function () {
+                    const extraDetailsRow = this.closest('tr').nextElementSibling;
+                    extraDetailsRow.classList.toggle('d-none');
+                    this.textContent = extraDetailsRow.classList.contains('d-none') ? 'Show Details' : 'Hide Details';
+                });
+            });
+        
+            // Filter Rows
+            const filters = document.querySelectorAll('#filterNo, #filterName, #filterCode, #filterPic, #filterLocation');
+            filters.forEach(filter => {
+                filter.addEventListener('change', function () {
+                    filterRows();
+                });
+            });
+        
+            function filterRows() {
+                const filterValues = {
+                    no: document.getElementById('filterNo').value.toLowerCase(),
+                    name: document.getElementById('filterName').value.toLowerCase(),
+                    code: document.getElementById('filterCode').value.toLowerCase(),
+                    pic: document.getElementById('filterPic').value.toLowerCase(),
+                    location: document.getElementById('filterLocation').value.toLowerCase(),
+                    search: document.getElementById('searchBar').value.toLowerCase(),
+                };
+        
+                document.querySelectorAll('#inventoryTableBody > tr:not(.extra-details)').forEach(row => {
+                    const no = row.children[0].textContent.toLowerCase();
+                    const name = row.children[1].textContent.toLowerCase();
+                    const code = row.children[2].textContent.toLowerCase();
+                    const pic = row.children[4].textContent.toLowerCase();
+                    const location = row.children[5].textContent.toLowerCase();
+        
+                    const matches = 
+                        (filterValues.no === "" || no.includes(filterValues.no)) &&
+                        (filterValues.name === "" || name.includes(filterValues.name)) &&
+                        (filterValues.code === "" || code.includes(filterValues.code)) &&
+                        (filterValues.pic === "" || pic.includes(filterValues.pic)) &&
+                        (filterValues.location === "" || location.includes(filterValues.location)) &&
+                        (filterValues.search === "" || 
+                            no.includes(filterValues.search) ||
+                            name.includes(filterValues.search) ||
+                            code.includes(filterValues.search) ||
+                            pic.includes(filterValues.search) ||
+                            location.includes(filterValues.search));
+        
+                    row.style.display = matches ? '' : 'none';
+                    row.nextElementSibling.style.display = matches ? '' : 'none';
+                });
+            }
+        
+            // Search Bar
+            document.getElementById('searchBar').addEventListener('input', function () {
+                filterRows();
+            });
+        
+            // Sort Table
+            document.querySelectorAll('.sort-button').forEach(button => {
+                button.addEventListener('click', function () {
+                    const sortKey = this.getAttribute('data-sort');
+                    const sortDirection = this.getAttribute('data-direction') || 'asc';
+                    sortTable(sortKey, sortDirection);
+                    this.setAttribute('data-direction', sortDirection === 'asc' ? 'desc' : 'asc');
+                });
+            });
+        
+            function sortTable(key, direction) {
+                const sortedItems = items.sort((a, b) => {
+                    const aValue = a.fields[key];
+                    const bValue = b.fields[key];
+                    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+                    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+        
+                const tableBody = document.getElementById('inventoryTableBody');
+                tableBody.innerHTML = '';
+                sortedItems.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <th scope="row">${item.fields.no}</th>
+                        <td>${item.fields.name}</td>
+                        <td>${item.fields.code}</td>
+                        ${item.fields.photo ? <td><img src="${item.fields.photo.url}" alt="${item.fields.name}" style="width: 50px; height: auto;"></td> : '<td>No photo available</td>'}
+                        <td>${item.fields.pic}</td>
+                        <td>${item.fields.location}</td>
+                        <td>
+                            <button class="btn btn-custom btn-sm toggle-details">Show Details</button>
+                            <a href="{% url 'edit-item' ${item.pk} %}" class="btn btn-outline-secondary">Edit</a>
+                            <a href="{% url 'delete-item' ${item.pk} %}" class="btn btn-delete">Delete</a>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                    const detailsRow = document.createElement('tr');
+                    detailsRow.classList.add('extra-details', 'd-none');
+                    detailsRow.innerHTML = `
+                        <td colspan="7">
+                            <div class="row">
+                                <div class="col">
+                                    <strong>Quantity:</strong> ${item.fields.quantity < 10 ? <span class="text-danger">${item.fields.quantity}</span> : <span class="text-success">${item.fields.quantity}</span>}
+                                </div>
+                                <div class="col"><strong>Department:</strong> ${item.fields.department}</div>
+                                <div class="col"><strong>Category:</strong> ${item.fields.category.name}</div>
+                                <div class="col"><strong>Date Created:</strong> ${item.fields.date_created}</div>
+                                <div class="col"><strong>History:</strong> ${item.fields.history}</div>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(detailsRow);
+                });
+        
+                // Rebind toggle details button event
+                document.querySelectorAll('.toggle-details').forEach(button => {
+                    button.addEventListener('click', function () {
+                        const extraDetailsRow = this.closest('tr').nextElementSibling;
+                        extraDetailsRow.classList.toggle('d-none');
+                        this.textContent = extraDetailsRow.classList.contains('d-none') ? 'Show Details' : 'Hide Details';
+                    });
+                });
+            }
+        });
+    </script>
+
+    <script id="inventory-data" type="application/json">
+        {{ items_data|safe }}
+    </script>
+{% endblock content %}
