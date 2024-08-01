@@ -1,7 +1,9 @@
-from django.contrib import admin
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path
-from .views import Index, SignUpView, Dashboard, AddItem, EditItem, DeleteItem
 from django.contrib.auth import views as auth_views
+from .views import Index, Dashboard, AddItem, EditItem, DeleteItem, SignUpView, ExportData
+from . import views
 
 urlpatterns = [
     path('', Index.as_view(), name='index'),
@@ -12,4 +14,6 @@ urlpatterns = [
     path('signup/', SignUpView.as_view(), name='signup'),
     path('login/', auth_views.LoginView.as_view(template_name='inventory/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='inventory/logout.html'), name='logout'),
-]
+    path('export-data/', views.ExportData, name='export-data')  # Correct usage
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

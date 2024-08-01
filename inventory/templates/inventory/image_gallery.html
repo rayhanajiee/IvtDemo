@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Gallery</title>
+</head>
+<body>
+    <h1>Image Gallery</h1>
+    <ul>
+        {% for item in items %}
+            <li>
+                <h2>{{ items.name }}</h2>
+                <img src="{{ item.photo.url }}" alt="{{ item.name }}" style="width: 300px;">
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
